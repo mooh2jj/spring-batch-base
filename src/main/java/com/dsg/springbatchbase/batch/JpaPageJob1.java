@@ -1,13 +1,16 @@
 package com.dsg.springbatchbase.batch;
 
 import com.dsg.springbatchbase.domain.Dept;
+import com.dsg.springbatchbase.domain.Dept2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.database.builder.JpaPagingItemReaderBuilder;
 import org.springframework.context.annotation.Bean;
@@ -36,8 +39,9 @@ public class JpaPageJob1 {
     @Bean
     public Step jpaPageStep1() {
         return stepBuilderFactory.get("jpaPageStep1")
-                .<Dept, Dept>chunk(chunkSize)
+                .<Dept, Dept2>chunk(chunkSize)
                 .reader(jpaPagingItemReader())
+                .processor(itemProcessor())
                 .writer(printItemWriter())
                 .build();
     }
@@ -53,12 +57,21 @@ public class JpaPageJob1 {
     }
 
     @Bean
-    public ItemWriter<Dept> printItemWriter() {
-        return list -> {
-            for (Dept dept : list) {
-                log.debug("dept: {}", dept.toString());
-            }
+    public ItemProcessor<Dept, Dept2> itemProcessor() {
+        return dept -> {
+            return Dept2.builder()
+                    .deptNo(dept.getDeptNo())
+                    .dName("New_" + dept.getDName())
+                    .loc("New_" + dept.getLoc())
+                    .build();
         };
+    }
+
+    @Bean
+    public JpaItemWriter<Dept2> printItemWriter() {
+        JpaItemWriter<Dept2> jpaItemWriter = new JpaItemWriter<>();
+        jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
+        return jpaItemWriter;
     }
 
 }
